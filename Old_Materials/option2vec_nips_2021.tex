@@ -1,0 +1,1488 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2021
+
+% ready for submission
+\PassOptionsToPackage{numbers}{natbib}
+\usepackage{nips_2021}
+\usepackage{xr}
+\externaldocument{nips_2021_appendix}
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2021}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2021}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2021}
+
+\usepackage{StyFiles/my_macros}
+
+%% Contents
+\usepackage{makeidx}
+
+%% Figures
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}         % colors
+\usepackage{subcaption}
+
+%% Features
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{StyFiles/fancyhdr}
+\usepackage{StyFiles/wrapfig}
+\usepackage{url}
+\usepackage{makecell}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+
+%% Formats
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage[toc,page]{appendix}
+\usepackage[font=small,labelfont=bf]{caption}
+% \usepackage[font=footnotesize]{subfig}
+\usepackage{StyFiles/hyphenat}
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+%% Algos
+\usepackage{StyFiles/algorithm}
+\usepackage{StyFiles/algorithmic}
+\usepackage[algo2e,ruled,vlined,linesnumbered]{algorithm2e}
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+
+%% For maths
+\usepackage[cmex10]{amsmath}
+\usepackage{amssymb,amsthm}
+\input{math_commands.tex}
+
+%% Commands
+\newcommand{\mmqp}[3]{\textrm{\sc MaxMarginQP}\!\left(\{\by_t, #1\}_{t=1}^{T}, #2, #3\right)}
+\newcommand{\energy}[1]{\ensuremath{E\!\left(#1\right)}}
+\newcommand{\bigCI}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+\newcommand{\red}[1]{\textcolor[HTML]{EB4335}{#1}}
+\newcommand{\blue}[1]{\textcolor[HTML]{4285F4}{#1}}
+\newcommand{\linkblue}[1]{\textcolor[HTML]{2E649E}{#1}}
+
+\definecolor{myLinkColor}{rgb}{0.18,0.39,0.62}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=myLinkColor,
+  filecolor=myLinkColor,
+  urlcolor=myLinkColor,
+  citecolor=myLinkColor,
+}
+
+%% Environments
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{obs}[thm]{Observation}
+\newtheorem{defn}[thm]{Definition}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Preamble
+%\renewcommand{\thepage}{\roman{page}}
+
+
+
+\title{Option2Vec: Learning Temporal-State Abstraction Embeddings
+  on the MDP}
+  % Learning Temporal-State Abstraction
+  % Representations for Reinforcement Learning}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\author{%
+  Chang Li\\
+  UBTECH Sydney AI Centre\\
+  School of Computer Science, University of Sydney\\
+  Sydney, NSW 2000, Australia\\
+  \texttt{chli4934@uni.sydney.edu.au}\\
+\And
+Dongjin Song \thanks{Dongjin Song and Dacheng Tao are corresponding authors.} \\
+NEC Laboratories America, Inc.\\
+Princeton University\\
+Princeton, NJ 08540, United States\\
+\texttt{dsong@nec-labs.com} \\
+\AND
+Dacheng Tao \footnotemark[1]\\
+  UBTECH Sydney AI Centre\\
+  School of Computer Science, University of Sydney\\
+  Sydney, NSW 2000, Australia\\
+  \texttt{dacheng.tao@sydney.edu.au}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  Temporally extended actions refer to actions that last for
+  multiple time steps. The option framework provides a natural
+  scheme to incorporate extended actions into reinforcement
+  learning. Learning an option, however, requires modeling
+  the initiation set, intra-option policy, and termination
+  condition, respectively, which is sub-optimal for knowledge
+  representation and is computationally expensive. To address
+  these issues, we consider temporal and state
+  abstraction jointly. In particular, we formulate the option framework as
+  a Hidden-Markov-Model-style Probabilistic Graphical Model
+  (PGM), thus enabling each option to be parameterized as a
+  compact embedding vector. To optimize this PGM, we first propose a novel \emph{Markovian
+  Option-Value function}, and prove it is an unbiased estimation of the
+  conventional value function. We then derive a two-stage policy
+  gradient theorem based on the above value function. Finally, we implement this PGM upon the Transformer architecture to encode options into fixed-length embeddings, named Option2Vec.
+  Extensive experiments on challenging \textit{Mujoco} environments
+  demonstrate Option2Vec's efficiency and effectiveness: under
+  widely used configuration, with merely 15.8\% parameters,
+  Option2Vec achieves competitive, if not better, performance compared to the state-of-the-art
+  baselines on all finite horizon and transfer learning
+  environments. Moreover, Option2Vec significantly outperforms
+  all baselines on infinite horizon environments while exhibiting
+  smaller variance, faster convergence, and interpretability.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+% \begin{wrapfigure}{r}[1pt]{0.4\textwidth}
+%   \vspace{-4mm}
+%   \includegraphics[width=1\linewidth]{figures/scale.png}
+%   \caption{\label{fig:sa_scale} Model Scale Comparison.}
+%   \vspace{-5mm}
+% \end{wrapfigure}
+
+Human is capable of scheduling daily tasks from macro timescale
+to micro timescale \cite{xia2020temporal}. In reinforcement
+learning, the capability of modeling courses behind such temporal
+hierarchies of long-term actions is referred to as temporal
+abstraction. The option framework~\cite{sutton1999between} is a
+popular solution that addresses this problem by formulating
+temporal abstractions as \emph{options}. In previous works
+\cite{sutton1999between,zhang2019dac,klissarov2017learnings,daniel2016probabilistic,levy2011unified,bacon2017option},
+options are defined as abstract high-level actions, whose
+executions are temporally extended to a variable amount of time.
+Although such a definition is straightforward, learning an option
+will require specifying the \emph{initiation set}, \emph{intra-option policy},
+and \emph{termination function} respectively, which can be less
+effective for knowledge representation~\cite{bacon2018temporal}
+and computationally
+expensive~\cite{jong2008utility,zhang2019dac,mankowitz2016adaptive}.
+
+Consider an example of training robots to cook mashed potatoes.
+The process typically consists of three stages: washing potatoes,
+boiling potatoes, and mashing potatoes. Each stage persists for a
+variable length of time. Learning options as high-level actions
+is analogous to training three robots, \textit{i.e.}, three
+distinct action policies with each policy dedicated to one
+specific stage. Once an option (the stage) is selected, its
+\emph{intra-option policy} will be trained independently and only be locally
+available to the current stage. Because of this, neither
+knowledge nor parameters are shared among options which is
+clearly inefficient for computation.
+
+Instead of representing options as temporally extended high-level
+actions, we turn to represent options as hidden
+variables, \textit{i.e.}, courses of temporally extended actions,
+which are invariant of insignificant temporal and state transitions. 
+Inspired by word embeddings in Word2Vec~\cite{mikolov2013distributed}, 
+we parameterize such hidden variables as option embeddings (\textit{i.e.}, semantic representation of
+options), which the action policy is trained to decode. In the above robotic example, learning
+options as embeddings is analogous to learning three instruction
+rules (encoded by the embeddings) for three stages, respectively.
+Each rule describes at that stage what actions to emit, when to
+stop, and which rule should be executed next. Instead of training
+three dedicated robots, we only need to train one robot,
+\textit{i.e.}, action policy, which can read abstract rules and
+decode them into actual actions. Under this formulation,
+knowledge of options is compactly encoded into embeddings.
+Computational cost can also be significantly reduced by sharing
+one action policy to decode all different option embeddings.
+
+Learning temporal-state abstraction embeddings of options in the
+context of reinforcement learning, however, is challenging since
+it requires developing a novel Markov Decision Process (MDP) and
+derive corresponding optimization algorithms. To solve this
+problem, we first reformulate the option framework as a
+Hidde-Markov-Model-style \cite{bishop2006pattern} Probabilistic
+Graphical Model (PGM), in which option embeddings are parameters
+of a mixture distribution. Although similar formulations have
+been employed as ``one-step option'' in previous works
+\cite{henderson2018optiongan,sharma2018directed,shankar2020learning,lee2020learning,zhang2019dac},
+we first identify that under this setting the conventional
+\emph{Value Function} no longer yields the Bellman equation
+\cite{sutton2018reinforcement}. Instead, we propose a novel
+\emph{Markovian Option-Value Function}, prove that it is an
+unbiased estimation of the conventional value function, and derive a
+novel Bellman equation. Based on the Bellman equation, we then
+derive an efficient two-stage policy gradient theorem
+\cite{sutton2018reinforcement} which can be combined with any
+MDP-style \cite{zhang2019dac} policy optimization algorithms
+(such as PPO \cite{witoonchart2017application}) for learning
+options. Finally, inspired by Transformer
+\cite{vaswani2017attention}, we implement this PGM as the
+Option2Vec, a simple yet effective Attention based
+Encoder-Decoder architecture. Empirical studies on challenging
+locomotion environments demonstrate Option2Vec's efficiency and
+effectiveness. In the absence of termination function, the
+embedding representations of options significantly outperform its
+counterparts in all environments. Under
+  widely used configuration, with merely 15.8\% parameters,
+  Option2Vec achieves competitive, if not better, performance compared to the state-of-the-art
+  baselines on all finite horizon and transfer learning
+  environments. Moreover, Option2Vec significantly
+outperforms all baselines on infinite horizon environments while
+exhibiting smaller variance and faster convergence. We also show
+that option embedding is interpretable, which is an important property
+(\textit{e.g.} ensuring safety to human) for applying RL agents in
+real-world applications.
+
+% Temporal abstractions \cite{sutton1999between} are courses of
+% some recurring long-term patterns assembled by a sequence of
+% actions. \citename{sutton1999between} formulate temporal
+% abstractions as \emph{options} and provide the option framework
+% to automatically discover options from data. In all previous
+% works
+% \cite{sutton1999between,zhang2019dac,klissarov2017learnings,daniel2016probabilistic,levy2011unified,bacon2017option},
+% options are defined as abstract high-level actions, whose
+% executions are temporally extended to a variable amount of time.
+% Although such definition is straightforward to understand, it is
+% well known to be less effective in representing knowledge
+% \cite{bacon2018temporal} and computationally expensive
+% \cite{jong2008utility,zhang2019dac,mankowitz2016adaptive}.
+
+% Consider, for example, training robots for cooking mashed
+% potatoes, which typically contains three stages: washing
+% potatoes, boiling potatoes and mashing potatoes. Each stage
+% persists for a variable length of time. Learning options as
+% high-level actions is analogously training three robots, i.e.
+% action policies, with each dedicated to only one stage. Due to
+% each option is distinctively trained and only locally available
+% to one stage, there is neither knowledge nor parameters sharing
+% between options, which is a clear waste of computation.
+
+% Instead of representing options as high-level actions, a more
+% compact \red{$P(\rvo_t|\rvs_t,\rvo_{t-1})$ is $\rvo$ an integer
+%   or vector (embedding)?} and computationally efficient \red{Eq
+%   \ref{eq:mdp_action_termination} $\sum_oP_o(\rva_t|\rvs_t)^o$ ->
+%   $P(\rva_t|\rvs_t,\rvo_t)$} way is to encode knowledge of
+% options into embeddings, i.e. hidden variables on which the
+% action policy is conditioned \red{why we can use hidden variables
+%   to represent temporal abstractions? we treat hidden variables
+%   as courses of temporal abstractions. Since hidden variables are
+%   state-temporal transition invariant, values of embeddings stay
+%   the same for a period of time. So we can temporally extend
+%   executions of options to a variable amount of time}. Embeddings
+% \cite{hinton1986learning} have proved its efficacy in
+% representing entities compactly as activation patterns of
+% real-valued vectors (e.g.word embeddings in Word2Vec
+% \cite{mikolov2013distributed}) and played as a building block in
+% recent advances of both CV
+% \cite{krizhevsky2012imagenet,dosovitskiy2020image} and NLP
+% \cite{vaswani2017attention,devlin2018bert,brown2020language}
+% areas. In this paper, we borrow this insight to the option
+% framework. As in the above robot example, learning options as
+% embeddings is analogously learning three instruction rules for
+% three stages respectively. Each rule describes at that stage what
+% actions to emit, when to stop, and which rule should be executed
+% next. Instead of training three dedicated robots, we only need to
+% train one robot, i.e. action policy, which can read abstract
+% rules and decode them into actual actions. Under this
+% formulation, knowledge of options are compactly encoded into
+% embeddings. Computational cost is also largely reduced by sharing
+% one action policy to decode all options embeddings.
+
+% \red{state-temporal invariance we treat option embeddings as
+%   clustering centroids. The decision of selecting an option
+%   $\hat{\rvo}_t$ can be made by simply assigning the mapped point
+%   $[\rvs_t,\rvo_{t-1}]$ to the closest centroid $\hat{o}^*$.
+%   Because a vector is closest to itself, this mechanism has a
+%   natural tendency to continue $\hat{\rvo}_t=\hat{o}_{t-1}$, yet
+%   a significantly different state $\rvs_t$ will pull the mapped
+%   sample point far enough from $\hat{o}_{t-1}$ and results
+%   another option centroid to be assigned.}
+
+% Unlike in other areas where embeddings can be learned by
+% designing a novel neural network architecture, in reinforcement
+% learning, we have to first enable representing option as
+% embeddings by proposing a novel Markov Decision Process (MDP),
+% and then derive optimization algorithms for learning it. In order
+% to achieve these, we first reformulate the option framework as a
+% Hidde-Markov-Model-style \cite{bishop2006pattern} Probabilistic
+% Graphical Model (PGM), in which option embeddings are parameters
+% of the mixture distribution. Although similar formulations have
+% been employed from various backgrounds
+% \cite{henderson2018optiongan,sharma2018directed,shankar2020learning,lee2020learning,zhang2019dac},
+% one of our technical contribution is that we first identify the
+% issue that under this setting the conventional \emph{Value
+%   Function} no longer yields the Bellman equation
+% \cite{sutton2018reinforcement}. Instead, we propose a novel
+% \emph{Markovian Option-Value Function} and prove it is an
+% unbiased estimation of conventional value function and derive the
+% novel Bellman equation for this HMM-Style PGM. Based on the
+% Bellman equation, we then derive an efficient two-stage policy
+% gradient theorem \cite{sutton2018reinforcement} for learning. As
+% a result, the PGM we proposed is a general-purpose MDP which can
+% be combined with any MDP-style \cite{zhang2019dac} policy
+% optimization algorithms (such as PPO
+% \cite{witoonchart2017application}).
+
+% We finally move on to implement this PGM as Option2Vec
+% (Option2Vec), a simple yet effective Attention based
+% Encoder-Decoder \cite{vaswani2017attention} architecture.
+% Empirical studies on challenging locomotion environments
+% demonstrate Option2Vec's efficiency. \red{In the absence of
+%   termination function, the embeddings representation of options
+%   significantly outperform non-termination variants in all
+%   environments.} Under widely used configuration, with merely
+% 15.8\% parameters, Option2Vec achieves SOTA-level performance on
+% all finite horizon and transfer learning environments. Moreover,
+% Option2Vec significantly outperforms all baselines on infinite
+% horizon environments while exhibiting smaller variance, faster
+% convergence and interpretability.
+
+
+% % Although $Option^{Local}$ and the \emph{call-and-return}
+% % execution mode is easy to understand, these design choices are
+% % extremely hard to learn and scale up.
+% % %and have severely impaired options' applicability.
+% % Specifically, $Option^{Local}$ is analogously defined on a
+% % computationally expensive statistical manifold
+% % \cite{amari1987differential}, on which each point $\omega_o$ is a
+% % triple containing local distributions.
+% % % As a result, most option variants compromise to only two-level
+% % % SMDP because $Option^{Local}$ are too expensive to learn and
+% % % numbers of options grow exponentially with levels
+% % % \cite{riemer2018learning}; the initiation set is mostly ignored
+% % % because of difficulties in learning it from data
+% % % \cite{khetarpal2020options}.
+% % Moreover, learning \emph{master policy} is analogously learning
+% % classification hyperplanes on the statistical manifold. In linear
+% % cases, for $M$ hyperplanes, \red{theoretically there are $2^M$
+% %   options to be learned with \cite{mankowitz2016adaptive}}. As
+% % pointed out by \citename{bacon2018temporal} (Chapter 3.6),
+% % $Option^{Local}$ does a poor job at representing knowledge
+% % compactly and requires more samples to learn than distributed
+% % representations.
+% % \begin{figure*}[h!]
+% %   \vspace{-5mm} \centering
+% %   \includegraphics[width=0.9\linewidth]{figures/Option2Vec_Manifold.png}\\
+% %   \vspace{-1mm} \centering
+% %   \caption{\label{fig:o2v_manifold} \blue{$Option^{Local}$
+% %       Classification} on \blue{Statistical Manifold} v.s.
+% %     \red{$Option^{\textrm{Embed}}$ Clustering} on \red{Parametric Space}.
+% %     On Statistical Manifold, for $M$ options there are \blue{$M$
+% %       intra-option policies} to learn (for clarity we omit
+% %     $P_o(\rvb|\rvs)$ and $\sI_o$). Selecting options is
+% %     analogously \blue{learning classification hyperplanes}
+% %     \cite{mankowitz2016adaptive}. On Parametric Space, for $M$
+% %     options there are \red{$M$ embedding centroids} to learn yet
+% %     all embeddings \red{share a single action policy (decoder)}.
+% %     Selecting options is analogously \red{assigning the closest
+% %       centroid to the hyperplane $[\rvs_t,\rvo_{t-1}]$}.}
+% %   \vspace{-5.5mm}
+% % \end{figure*}
+
+% % In this paper, we argue that $Option^{Local}$ and the
+% % \emph{call-and-return} mode are not mandatory for learning
+% % temporal abstractions. We show that when all local information
+% % (where to initiate, what actions to emit and when to terminate)
+% % of an $Option^{Local}$ are parameterized into a compact
+% % distributed representation (we refer to this formulation as
+% % $Option^{\textrm{Embed}}$), the goal of temporally extending an action can
+% % still be achieved at least as effective as $Option^{Local}$ yet
+% % with significantly less computational cost by replacing the
+% % \emph{call-and-return} mode with a simple \emph{clustering}
+% % mechanism. We illustrate the difference between two mechanisms in
+% % Figure \ref{fig:o2v_manifold}.
+
+% % Specifically, $Option^{\textrm{Embed}}$s are essentially clustering
+% % centroids on a parametric space, which is \red{homeomorphic} to
+% % the statistical manifold. The observed current state and
+% % previously executed option form a hyperplane
+% % $[\rvs_t,\hat{\rvo}_{t-1}]$ on the parametric space. The decision
+% % of selecting an option $\hat{\rvo}_t$ can be made by simply
+% % assigning the hyperplane to the closest centroid $\hat{o}^*$.
+% % Because a vector is closest to itself, this mechanism has a
+% % natural tendency to continue $\hat{\rvo}_t=\hat{o}_{t-1}$, yet a
+% % significantly different state $\rvs_t$ will pull the hyperplane
+% % far enough from $\hat{o}_{t-1}$ and results another option
+% % centroid to be assigned. Because the parametric space is now an
+% % ambient space of both state space and option space,
+% % $Option^{\textrm{Embed}}$ combines advantages from both temporal
+% % abstraction and state abstraction \cite{knoblock1990learning}. As
+% % shown in Figure \ref{fig:o2v_manifold}, compared to
+% % $Option^{Local}$ learns an intra-option policy for every option,
+% % $Option^{\textrm{Embed}}$ is significantly more efficient since all
+% % embeddings share the same action decoder.
+
+% % A natural choice for modeling such mechanism is a simple
+% % Hidden-Markov-Model-style Probabilistic Graphical Model (PGM), in
+% % which $Option^{\textrm{Embed}}$ are simply parameters of the mixture
+% % distribution. We derive policy gradient theorems based on this
+% % PGM and show that it can be solved efficiently by employing the
+% % Double Actor-Critic \cite{zhang2019dac} algorithm. We implement
+% % this mechanism as a simple yet effective Attention based
+% % Encoder-Decoder architecture: the Option2Vec (Option2Vec) architecture.
+% % Our main contributions are: (1) proposing option embedding
+% % vectors, the first distributed representations of options, and
+% % replace the complex \emph{call-and-return} mode with an efficient
+% % \emph{clustering} mechanism; (2) proposing the first Attention
+% % \cite{vaswani2017attention} based Encoder-Decoder architecture,
+% % the Option2Vec (Option2Vec) architecture, for learning options with much
+% % better scalability, smaller variance and faster convergence; (3)
+% % demonstrating option embeddings are interpretable, which is a key
+% % property for developing real-world RL applications (e.g. ensuring
+% % safety for human).
+
+
+% % A better way to employ large scale computability. treated as
+% % undirected graph. learn dependencies end-to-end manner.
+% % interpretability; safety
+
+% % To the best of our knowledge, MDP-Skill is the first MDP enables
+% % distributed representations of temporal abstractions. Option2Vec is the
+% % first embedding, attention and encoder-decoder.
+
+% % skill embedding can be seen as a minimal (amy zhang iclr2021)
+% % causal set describing temporal-state (dynamic aware) irrelevant
+% % by adding extra in objective (feudal net).
+
+% % As explained in Appendix \ref{sec:appen_gist}, first-order markov
+% % formulated MDP-Skill did not fully exploit the potential of Option2Vec. a
+% % Deep (multi-hierarchy) Wide (higher-order) MDP-Skill will fully
+% % unleash the power of Option2Vec and gives rise to a general-purpose
+% % large-scale pre-training framework in RL. We focus this work on
+% % proposing MDP-Skill and Option2Vec and will explore DWOption2Vec in the future
+% % work.
+
+% % % \item Large variance
+% % %   \cite{zhang2019dac,haarnoja2018soft}: SMDP
+% % %   algorithms are notoriously sensitive to hyperparameters . Due
+% % %   to the SMDP formulation, more stable Markov Decision Process
+% % %   (MDP) policy gradient algorithms cannot be used.
+
+% % % \begin{enumerate}
+% % % \item Option2Vec is more sample efficient, because a) Option2Vec is MDP
+% % %   formulated, thus sample at each time step can be used to update
+% % %   the skill policy; and b) Only one action policy decoder is
+% % %   needed. It learns to decode each dimension of the skill context
+% % %   vector at each time step whichever skill is activated;
+% % % \item Option2Vec has smaller variance, because a) The skill value upon
+% % %   arrival function (Eq ~(\ref{eq:sa_v})) is theoretically and
+% % %   empirically proven to have smaller variance than the
+% % %   conventional value function; and b) Option2Vec only needs to train two
+% % %   (skill and action) policy networks; and c) Option2Vec can employ more
+% % %   stable MDP based policy gradient algorithms (e.g.
+% % %   PPO~\cite{schulman2017proximal});
+% % % \item Option2Vec has better scalability, because a) Regardless of the
+% % %   number of skills, only two policies need to be trained; and b)
+% % %   Adding one more skill is as cheap as adding a context vector;
+% % %   % to write: disentangle; exploration; convergence speed;
+% % %   % interpretability; generalization
+% % % \item Option2Vec is more effective, because a) On infinite-horizon
+% % %   environments, Option2Vec significantly outperforms the other models;
+% % %   and b) On transfer learning environments, Option2Vec ranks the first in
+% % %   5 out of 6 environments and shows its advantages in knowledge
+% % %   reuse tasks;
+% % % \item Option2Vec has better interpretability. Unlike the option framework
+% % %   encodes abstract knowledge implicitly in action policies,
+% % %   knowledge of a skill is explicitly encoded in each dimension of
+% % %   the skill context vector.
+% % % \end{enumerate}
+
+
+% % % % Incomplete Ideas:
+
+% % % % 1. 问问题，要解决什么问题，在干什么
+% % % % 2. 当前sota什么状况，但是有什么问题
+% % % % 3. 你做了啥，为啥能解决问题
+% % % % 4. 你这东西有啥特点
+% % % % 5. 怎么证明这东西work
+% % % % 6. Implication 是啥
+
+% % % % to write: smaller variance
+% % % % to write: only one critic
+% % % % to write: deep large scale; imitation; causual relationship
+% % % % because each run variance so small; not only exploration.
+
+% % % % todo: skill not pg/bp; may be dynamic routing/inference/K-means
+% % % % is enough. should have much simpler design
+
+% % % % todo: why option converges slower than action? disentangle paper
+
+% % % % todo: supervised train Option2Vec first -> reinf train Option2Vec; Imitation
+% % % % Learning (dm-control CMU humanoid-v3)
+
+% % % % todo: formal def of the turkey: latent variables between
+% % % % actions and environment. Not observable but truly exists
+% % % % ; design an experiment to show this problem
+
+% % % % potential problem: currently p(o_t|s_t,o_{t-1}) is updated
+% % % % using Q(o_t,s_t). Should it be Q(o_t,s_t,o_{t-1})? Should
+% % % % R_{t+1} depends on o_{t-1}?
+
+% % % % Yes it should. Reason:
+
+% % % % No it should not. Reason: We should not model environment. This
+% % % % is model free algo. Even though in reality, environment depends
+% % % % on latent variable $o_{t-1}$ to give R_{t+1}. But we should not
+% % % % model this relationship in Q value.
+% % % % Problem: Q used to update p(o'|s',o) does not consider o
+% % % % Possible solution: instead of include o in Q, create another
+% % % % ``latent variable environment reward mechanism'' function.
+% % % % Explicitly model this latent relationship between skill and
+% % % % environment's reward
+
+% % % % A state-previous-skill pair.
+% % % % Previous research only consider abstract, did not demonstrate
+% % % % contextual information. Knowing which action has been done can
+% % % % help predicting whats the next move. Cooking example
+% % % % Temporal relationships between skills (skill context) has not
+% % % % been explored before. Seems to encode only one-step temporal
+% % % % relationship. In order to encode multi time steps relationships,
+% % % % one can use longer history by turning into higher order markov,
+% % % % but still markov. our proof still holds. (e.g. adding temporal
+% % % % masks back to attention, extending the decoder input vector to a
+% % % % matrix, where rows are time steps, turn it into a k-order markov
+% % % % process). Remain open for future work.
+
+% % % % todo: explain why attention is not the best
+
+% % % % idea: In order to have better temporal representation what has
+% % % % happened before, need a dynamic routing like forward algorithm
+% % % % to encode all skills have been taken in time series
+
+% % % % idea: maximizing reasoning entropy
+% % % % statistical random variables decreasing bias increasing variance
+% % % % reasoning variables decreasing bias decreasing variance;
+% % % % maximizing reasoning entropy
+
+% % % % todo: MDP equi minor contribution
+% % % % todo: Equations addressed stuffed turkey (skill policy, decoder
+% % % % in nn)
+% % % % todo: reasons for oc -> sa based on MDP:
+
+% % % % minor contribution: MDP
+% % % % straight forward extend to deeper layer
+% % % % NLP interface to understand/instruct which dimension encode
+% % % % what information
+\vspace{-4mm}
+\section{Background}
+\label{sec:background}
+\vspace{-3mm}
+
+A Markov Decision Process~\cite{puterman2014markov}
+$M=\{\sS,\sA,R,P,\gamma\}$ consists of a state space $\sS$, an
+action space $\sA$, a state transition function
+$P(\rvs_{t+1}|\rvs_t,\rva_t): \sS\times\sA\rightarrow\sS$, a
+discount factor $\gamma\in\sR$, and a reward function
+$R(\rvs,\rva)=\E[r|\rvs,\rva]:\sS\times\sA\rightarrow\sR$ which
+is the expectation of the reward $r\in\sR$ received from
+the environment after executing action $\rva_t$ at state
+$\rvs_t$. A policy
+$\pi=P(\rva|\rvs):\sA\times\sS\rightarrow[0,1]$ is a probability
+distribution defined over actions conditioning on states. A
+discounted return is defined as $G_t =
+\sum_k^N\gamma^kr_{t+k+1}$, where $\gamma\in (0,1)$ is a
+discounting factor. The value function
+$V[\rvs_t]=\E_{\tau\sim\pi}[G_t|\rvs_t]$ is the expected return
+starting at state $\rvs_t$ and the trajectory
+$\tau=\{\rvs_t,\rva_t,r_{t+1},\rvs_{t+1},\dots\}$ follows policy
+$\pi$ thereafter. The action-value function is defined as
+$Q[\rvs_t,\rva_t]= \E_{\tau\sim\pi}[G_t|\rvs_t,\rva_t]$.
+
+The option framework~\cite{sutton1999between} enables learning temporal abstractions by
+introducing a set of options on the MDP. We use the bold-case
+$\rvo$ to denote random variables and the light-italic-case $o$
+to denote a realized instantiation. In the option framework, options are defined as high-level
+actions whose executions can extend to a variable amount of time and are developed on a Semi-Markov Decision Process (SMDP). Specifically,
+in a set of options $\Omega=\{\omega_1,\omega_2,...\}$, each
+\emph{option} is a triple
+$\omega_o=(\sI_{o},P_{o}(\rva|\rvs),P_{o}(\rb|\rvs))$, where the
+subscript $o\in\sO=\{1,2,\dots,K\}$ is an integer \emph{option
+  index} and $K$ is the number of options; $\sI_o$ is the
+\emph{initiation set}, it defines a subset of state space
+$\sI_o\subseteq\sS$ where $\omega_o$ can be initiated;
+$P_o(\rva|\rvs):\sA\times\sS\rightarrow[0,1]$ is the
+\emph{intra-option policy} from which actions are sampled;
+$P_o(\rvb|\rvs):\sS\rightarrow[0,1]$ is the \emph{termination
+  function} where $\rvb\in \{0,1\}$ is a binary variable,
+$\beta_o=P_o(\rvb=1|\rvs)$ is the probability to terminate
+$\omega_o$. We refer to this formulation as $Option^{\textrm{Triple}}$.
+
+The execution of an option is temporally extended to variable
+amount of time by following a \emph{call-and-return} mode: at
+the start of an execution, given state $\rvs_t$, an \emph{option
+  index} $o$ is selected according to the \emph{master policy} $P(\rvo|\rvs)$ where $\rvo\in\sO$ is used to
+sample the index of which option $\omega_o$ to be executed,
+then actions are sampled by following the activated option
+$\omega_o$'s \emph{intra-option policy} $\rva\sim P_o(\rva|\rvs)$
+thereafter, until at some time the \emph{termination function}
+determines to stop $P_{o}(\rb=1|\rvs)$ and repeats this procedure
+all over again. We use $\tau=\{\rvs_0,\rvo_0,\rva_0,\rvs_1,\rvo_1,\rva_1,\ldots\}$
+to denote the trajectory of the option framework and $\1$ is an
+indicator function and is only true when $\rvo_t=o_{t-1}$ (notice
+that $o_{t-1}$ is a realization at $\rvo_{t-1}$). Dynamics of the option framework can be written as:
+\begin{align}
+\vspace{-3mm}
+  \label{eq:oc_pgm_joint}\nonumber\\[-2em]\nonumber
+  P(\tau) = P(\rvs_0)&P(\rvo_0)P_{o_0}(\rva_0|\rvs_0)\prod_{t=1}^\infty P(\rvs_t|\rvs_{t-1},\rva_{t-1})P_{o_t}(\rva_{t}|\rvs_{t})\nonumber\\[-.5em]
+                     &[P_{o_{t-1}}(\rvb_t=0|\rvs_t)\1_{\rvo_t=o_{t-1}} +P_{o_{t-1}}(\rvb_t=1|\rvs_t)P(\rvo_t|\rvs_t)].\\[-2em]\nonumber
+\end{align}
+Although easy to understand, $Option^{\textrm{Triple}}$ is less effective in
+representing knowledge compactly:  since each
+option is trained distinctively, there is no knowledge nor
+parameters sharing between options, and thus is
+computationally expensive to learn. In this paper, we
+address this issue by encoding knowledge
+of options into more compact and effective representations, \textit{i.e.},
+option embeddings.
+% \textbf{Double Actor-Critic (DAC) architecture}: The SMDP option
+% framework consumes variable amount of samples in one update of
+% the master policy and thus is sample inefficient. To address this
+% issue, DAC re-formulates the option framework as two augmented
+% state and action space \cite{levy2011unified} MDPs, a high level
+% MDP $M^H$ and a low level MDP $M^L$:
+% \begin{align}
+%   \label{eq:dac_h}
+%   M^H\doteq \{\sS^H\doteq \sO\times\sS,\sA^H=\sO,P^H=P[ (\rvo_t,\rvs_{t+1})|(\rvo_{t-1},\rvs_t),\rvo_t ],r^H=r[ (\rvs_t,\rvo_t) ],\gamma\}\\
+%   \label{eq:dac_l}M^L\doteq \{\sS^L\doteq \sO\times\sS,\sA^L=\sA,P^L=P[ (\rvo_{t+1},\rvs_{t+1})|(\rvo_t,\rvs_{t}),\rva_t ],r^L=r[ (\rvs_t,\rva_t) ],\gamma\}
+% \end{align}
+% by substituting conventional value function's state and action
+% space with two MDPs' augmented state and action space separately,
+% DAC reveals that optimizing the high-level MDP and low-level MDP
+% alternatively is equivalent to optimizing the option-induced
+% SMDP. Therefore, DAC provides a novel two-stage optimization
+% algorithm which is compatible with any sample efficient MDP-style
+% algorithm, e.g. PPO \cite{witoonchart2017application}. \red{ In
+%   this work we formulate the option framework as an HMM-style
+%   PGM. Unlike DAC employs the option random variable $\rvo$ in
+%   both augmented state and action space, we treat $\rvo$ as the
+%   hidden variable consistently and derive policy gradient
+%   theorems by following conditional dependency relationships
+%   along PGM. Although our formulation and derivation are
+%   significantly different from DAC,} encouragingly, our policy
+% gradient theorems can also be augmented as DAC's two MDPs and
+% employ the two-stage optimization algorithm directly.
+\vspace{-4mm}
+\section{Methodology}
+\label{sec:option}
+\vspace{-3mm}
+As explained in Section \ref{sec:background}, options are defined
+as high-level actions that are temporally extended on the SMDP.
+In this section, we propose a novel perspective of options,
+  \textit{i.e.}, redefining options as hidden variables whose values are
+  invariant of insignificant temporal-state transitions, and
+  represent options as embeddings (referred to as
+  $Option^{\textrm{Embed}}$) on which the action policy is conditioned.
+For this purpose, we need to develop a novel Decision Process
+which enables representing knowledge of an option (\textit{e.g.}, where to
+initiate, what actions to emit and when to terminate) as a
+semantic vector, and then derive optimization algorithms for
+learning this Decision Process. We achieve these in three steps.
+In Section \ref{sec:option_pgm}, we first reformulate the option
+framework as a Hidden-Markov-Model-style (HMM-style)
+Probabilistic Graphical Model (PGM)
+\cite{koller2009probabilistic} as shown in Figure \ref{fig:pgm}, and define
+an \emph{option policy} as the mixture distribution over hidden
+variables. In Section \ref{sec:option_embed}, we show how to
+encode knowledge of options into embeddings, \textit{i.e.}, parameters of
+the \emph{option policy}. In Section \ref{sec:pgm_opt}, we define
+the Decision Process based on the PGM and derive optimization
+algorithms.
+
+It is worth mentioning that, although similar HMM-style
+formulations have been employed in earlier works
+\cite{henderson2018optiongan,sharma2018directed,shankar2020learning,lee2020learning,zhang2019dac}
+as ``one-step option'', our work is the first one which discovers
+that under this setting, conventional \emph{Value Function}
+$V[\rvs_t]$ no longer yields the Bellman equation
+\cite{sutton2018reinforcement}. Instead, we propose a novel
+\emph{Markovian Option-Value Function}
+$\bar{V}[\rvs_t,\bar{\rvo}_t]$ and prove that it is an unbiased
+estimation of $V[\rvs_t]$, whose variance is up-bounded by
+$V[\rvs_t]$. We further derive policy gradient theorems and show
+that our theorems follow a two-stage optimization scheme
+\cite{zhang2019dac}, which allows us to employ sample efficient
+MDP-style policy optimization algorithms (\textit{e.g.}, PPO~\cite{witoonchart2017application}).
+\vspace{-2mm}
+\subsection{An HMM-style Formulated Option Framework}
+\label{sec:option_pgm}
+\vspace{-2mm}
+\begin{wrapfigure}{r}[1pt]{0.4\textwidth}
+  \vspace{-3mm}
+  \includegraphics[width=1\linewidth]{./figures/doe.png}
+  \caption{\label{fig:pgm}\small PGM for Option2Vec.}
+  \vspace{-5mm}
+\end{wrapfigure}
+In this subsection we show how to reformulate the option framework
+defined in Section \ref{sec:background} as an HMM-style PGM
+(Figure \ref{fig:pgm}), and enable representing option embeddings
+as parameters of the hidden variables' mixture distribution. We
+first follow \citename{bishop2006pattern}'s formulation of
+mixture distributions (Chapter 9) and redefine the integer
+\emph{option index} $\rvo\in\sO$ as a $K$-dimensional one-hot
+vector $\bar{\rvo}\in\bar{\sO}=\{0,1\}^K$, where $K$ is the
+number of options. For $\bar{\rvo}_t=o_t$, by definition only the
+entry $o_t=1$ and all the other entries of $\bar{\rvo}_t$ are
+$0$. We then reformulate \emph{intra-option policy} of all
+options $\omega\in\Omega$ as a mixture distribution by
+introducing an extra dependency on $\bar{\rvo}$:
+\begin{align}
+  \label{eq:mixture_option_triple}
+  P(\rva_t|\rvs_t,\bar{\rvo}_t) =
+  \prod_{o\in\bar{\rvo}_t}P_{o}(\rva_t|\rvs_t)^{o},\\[-1.5em]\nonumber
+\end{align}
+such that
+$P_{o_t}(\rva_t|\rvs_t)=P(\rva_t|\rvs_t,\bar{\rvo}_t=o_t)$. For
+the same reason, we can reformulate the \emph{termination
+  function} as $P(\rvb_t|\rvs_t,\bar{\rvo}_{t-1}) =
+\prod_{o\in\bar{\rvo}_{t-1}}P_{o}(\rb_t|\rvs_t)^{o} $. We reformulate
+the indicator function $\1_{\rvo_t=o_{t-1}}$  in
+Eq.~(\ref{eq:oc_pgm_joint}) is now a degenerate probability
+distribution~\cite{puterman2014markov}
+$P(\bar{\rvo}_t|\bar{\rvo}_{t-1}) =\left\{\def\arraystretch{1.2}\begin{tabular}{@{}l@{\quad}l@{}}
+  $1$ & if $\bar{\rvo}_t=\bar{\rvo}_{t-1}$ \\
+  $0$ & if $\bar{\rvo}_t\neq\bar{\rvo}_{t-1}$
+\end{tabular}\right.$ and extend the \emph{master policy} $P(\rvo_t|\rvs_t)$ in
+Eq.~(\ref{eq:oc_pgm_joint}) to an HMM-style \emph{mixture master
+  policy} $P(\bar{\rvo}_t|\rvs_t,\rvb_t,\bar{\rvo}_{t-1}) =
+P(\bar{\rvo}_t|\rvs_t)^{\rb_t}P(\bar{\rvo}_t|\bar{\rvo}_{t-1})^{1-\rb_t}$
+with $\rvb_t$ and $\bar{\rvo}_{t-1}$ as hidden variables. We use
+$\bar{\tau}=\{\rvs_0,\bar{\rvo}_0,\rva_0,\rvs_1,\bar{\rvo}_1,\rva_1,\ldots\}$
+to denote the trajectory. Substituting above terms into
+Eq.~(\ref{eq:oc_pgm_joint}), the option framework is now
+simplified as a HMM-style PGM (Figure \ref{fig:pgm}):
+\begin{align}
+  \vspace{-5mm}
+  P(\bar{\tau}) =  P(\rvs_0)&P(\bar{\rvo}_0)P(\rva_0|\rvs_0,\bar{\rvo}_0)\prod_{t=1}^\infty P(\rvs_t|\rvs_{t-1},\rva_{t-1})P(\rva_{t}|\rvs_{t},\bar{\rvo}_{t})\nonumber\\[-0.5em]
+                            &\sum_{\rvb_t}P(\rvb_t|\rvs_t,\bar{\rvo}_{t-1})P(\bar{\rvo}_t|\rvb_t,\rvs_t,\bar{\rvo}_{t-1})\nonumber\\[-1em]
+  \label{eq:option_embed_joint} =  
+  P(\rvs_0)&P(\bar{\rvo}_0)P(\rva_0|\rvs_0,\bar{\rvo}_0)
+             \prod_{t=1}^\infty P(\rvs_t|\rvs_{t-1},\rva_{t-1})
+             P(\rva_{t}|\rvs_{t},\bar{\rvo}_{t})P(\bar{\rvo}_t|\rvs_t,\bar{\rvo}_{t-1})\\[-2em]\nonumber
+\end{align}
+Note that the \emph{termination function}
+  diminishes as a natural result of the marginalization over the
+  termination variable $\rvb_t$. Eq.~(\ref{eq:option_embed_joint})
+  suggests replacing the \emph{termination function} and
+  \emph{master policy} with a single new term
+  $P(\bar{\rvo}_t|\rvs_t,\bar{\rvo}_{t-1})$ which is referred as \emph{option policy} in our paper. Since the \emph{termination function}
+  is executed at every time step, this replacement will not
+  introduce extra computational cost. However, while the
+  \emph{option policy} is responsible for both selecting options
+  and temporally extending an option's execution, the one-hot vector $\bar{\rvo}_{t-1}$
+  contains little context information for the \emph{option
+    policy} to exploit. Although earlier works
+  \cite{henderson2018optiongan,sharma2018directed,shankar2020learning,lee2020learning,zhang2019dac} have employed ``one-step option'' as $P(\rvo_t|\rvs_t,\rvo_{t-1})$ in derivations of Eq.~(\ref{eq:oc_pgm_joint}),
+  the integer \emph{option index} $\rvo$ also contains little information, and thus as shown in
+  Section~\ref{sec:exp_perf},
+  in their applications the \emph{termination function} and
+  \emph{master policy} are still implemented for better empirical
+  performance. To address this problem, in
+Section~\ref{sec:option_embed} we represent options as compact
+real-valued vectors, \textit{i.e.}, option embeddings.
+ \vspace{-3mm}
+\subsection{Representing Options as Temporal-State Abstraction
+  Embeddings}
+\label{sec:option_embed}
+ \vspace{-2mm}
+In this subsection we answer two questions: (1) how to encode
+knowledge of $Option^{\textrm{Triple}}$ with option embeddings, \textit{i.e.}, $Option^{\textrm{Embed}}$; and (2) how to achieve
+temporal abstractions by replacing the \emph{call-and-return} mode
+with a simple \emph{clustering} mechanism. We argue that for
+learning temporal abstractions, high-level actions, \textit{i.e.},
+$Option^{\textrm{Triple}}$, and the \emph{call-and-return} mode are not
+mandatory: temporal abstractions can be achieved by replacing
+$Option^{\textrm{Triple}}$ with the a newly defined temporal-state transition-invariant embeddings of hidden variables on which the action policy is conditioned.
+
+We start by reviewing the weaknesses of defining options as high-level actions. Specifically, each $Option^{\textrm{Triple}}$, \textit{i.e.}, a
+set of distributions, is analogously a point on a statistical
+manifold \cite{amari1987differential}, which is 
+computationally expensive to learn. Most literatures ignore
+\emph{the initiation} set because of difficulties in learning it
+from data \cite{khetarpal2020options}. Learning \emph{master
+  policy} is analogously learning classification hyperplanes
+\cite{mankowitz2016adaptive} on the statistical manifold. For $M$
+hyperplanes, theoretically there are $2^M$ options to be learned as shown in Figure~\ref{fig:o2v_manifold} (left). As pointed out by \citename{bacon2018temporal} (Chapter
+3.6), $Option^{\textrm{Triple}}$ cannot at represent knowledge compactly and requires more samples to achieve good performance.
+\begin{figure*}[h!]
+  \vspace{-3mm} \centering
+  \includegraphics[width=0.9\linewidth]{figures/O2V_Manifold.png}\\
+  \vspace{-1mm} \centering
+  \caption{\label{fig:o2v_manifold} \small
+    $Option^{\textrm{Triple}}$ Classification on Statistical
+      Manifold (left) v.s. $Option^{\textrm{Embed}}$ Clustering on
+    Parametric Space (right). On Statistical Manifold, for $M$
+    options there are $M$ intra-option policies to learn
+    (for clarity we omit $P_o(\rvb|\rvs)$ and $\sI_o$). Selecting
+    options is analogously learning classification 
+      hyperplanes (blue lines). On Parametric Space, for $M$
+    options there are $M$ embedding centroids to learn yet
+    all embeddings share one action policy (decoder).
+    Selecting options is analogously assigning the closest
+      centroid to the point $[\rvs_t,\rvo_{t-1}]$.}
+  \vspace{-5mm}
+\end{figure*}
+
+On the other hand, as suggested by
+Eq.~(\ref{eq:option_embed_joint}), temporal abstractions can be
+achieved more efficiently only by a simple \emph{option
+  policy} $P(\bar{\rvo}_t|\rvs_t,\bar{\rvo}_{t-1})$ as long as
+there is sufficient context information encoded in $\bar{\rvo}$.
+Inspired by word embeddings in
+Word2Vec~\cite{mikolov2013distributed}, we address this issue by
+representing options as more compact and computationally
+efficient embeddings (\textit{i.e.}, semantic space of options).
+Specifically, we define a parameter matrix
+$\mW_\rvo=[\hat{\rvo}_1,...,\hat{\rvo}_K]\in\sR^{D\times K}$,
+where $D$ is the dimension of the vector and $K$ is number of
+options. Each real-valued vector $\hat{\rvo}$ is referred to as
+an $Option^{\textrm{Embed}}$. As in transformer
+\cite{vaswani2017attention}, the option embedding is retrieved
+from the embedding matrix by $\hat{\rvo}=\mW_{\rvo}\bar{\rvo}$.
+Under this formulation, the hidden variable $\bar{\rvo}$ remains 
+the random variable of the \emph{option policy}, while the option 
+embedding matrix $\mW_{\rvo}$ is simply the distribution's parameters:
+\begin{align}
+  \label{eq:option_hat_joint}
+  P(\bar{\tau}) =    
+  P(\rvs_0)P(\bar{\rvo}_0)P(\rva_0|\rvs_0,\bar{\rvo}_0)
+  \prod_{t=1}^\infty P(\rvs_t|\rvs_{t-1},\rva_{t-1})
+  P(\rva_{t}|\rvs_{t},\hat{\rvo}_{t})P(\bar{\rvo}_t|\rvs_t,\bar{\rvo}_{t-1};\mW_{\rvo}\nonumber\\[-2em]
+\end{align}
+where the action policy employs $\mW_{\rvo}$ as a realized hidden
+variable rather than parameters, such that
+$P(\rva_{t}|\rvs_{t},\hat{\rvo}_{t}=\mW_{\rvo}\bar{\rvo})=P(\rva_{t}|\rvs_{t},\bar{\rvo}_{t},\mW_{\rvo})$.
+Note that rather than a mixture of $K$ distributions defined by
+Eq.~(\ref{eq:mixture_option_triple}), the action policy is now a
+single decoder which is shared by all option embeddings. All
+local information of an $Option^{\textrm{Triple}}$ (where to initiate,
+what actions to emit and when to terminate) are parameterized as
+an embedding vector, \textit{i.e.},
+$Option^{\textrm{Embed}}$.
+
+As shown in Figure~\ref{fig:o2v_manifold} (right), $Option^{\textrm{Embed}}$s are
+actually clustering centroids on a parametric space, which is
+homeomorphic to the statistical manifold. The \emph{option
+  policy} maps the observed pair $[\rvs_t,\hat{\rvo}_{t-1}]$ to a
+point (detailed implementation is available in Section \ref{sec:net_arch})
+on the parametric space. The decision of selecting an option
+$\hat{\rvo}_t$ can be made by simply assigning the point to the
+closest centroid $\hat{\rvo}^*$, whose distance is estimated
+efficiently by employing the Attention mechanism
+\cite{vaswani2017attention}. Because a vector is closest to
+itself, this mechanism has a natural tendency to continue
+$\hat{\rvo}_t=\hat{o}_{t-1}$, yet a significantly different state
+$\rvs_t$ will pull the point far enough from $\hat{\rvo}_{t-1}$
+and result in another option centroid being assigned. Because the
+parametric space is now an ambient space of both state space and
+option space, $Option^{\textrm{Embed}}$ combines advantages from both
+temporal abstraction and state abstraction
+\cite{knoblock1990learning}.
+
+\vspace{-3mm}
+\subsection{Policy Gradient-based Optimization Algorithms}
+\label{sec:pgm_opt}
+\vspace{-2mm}
+
+Computing gradients of
+Eq.~(\ref{eq:option_hat_joint}) directly is intractable because it
+depends on the state transition probability that is unknown under
+the model-free RL setting. We address this issue
+by first following the RL literature
+\cite{sutton2018reinforcement} and define value functions as
+expected returns conditioned on the PGM's dynamics. We then
+propose a novel \emph{Markovian option-value function} to enable
+the derivation of the Bellman equation. We finally derive a
+sample efficient policy gradient-based theorems
+\cite{sutton2018reinforcement}, which do not involve the state
+distribution's gradients, along the expansion of the Bellman
+equation. Due to space limitations, we provide the details of all proofs in Appendix~\ref{sec:appen_sa_v_proof}.
+
+Following the RL literature \cite{sutton2018reinforcement}, we
+derive the Bellman equation by recursively expanding value
+functions. Similar to the value function in Section
+\ref{sec:background}, we define the \emph{option-value function}
+as the expected return $G_t = \sum_k^N\gamma^kr_{t+k+1}$
+conditioned on the current state and option:
+\begin{align}
+  \label{eq:sa_q_o}
+  Q_O[\rvs_t,\bar{\rvo}_{t}]=\E[G_t|\rvs_t,\bar{\rvo}_{t}]
+\end{align}
+We can further expand the \emph{option-value function} as the
+expectation of an \emph{option-action-value function} $Q_A[
+\rvs_t,\bar{\rvo}_t,\rva_t]$ by exploiting conditional
+independencies encoded in the PGM:
+\begin{align}
+\label{eq:sa_q_a}
+  Q_O[\rvs_t,\bar{\rvo}_{t}]=&\E[G_t|\rvs_t,\bar{\rvo}_{t}]  =\sum_{\rva_t}P(\rva_t|\rvs_t,\bar{\rvo}_{t})\E[G_t|\rvs_t,\bar{\rvo}_t,\rva_t]=\sum_{\rva_t}P(\rva_t|\rvs_t,\bar{\rvo}_{t})Q_A[ \rvs_t,\bar{\rvo}_t,\rva_t]
+  \vspace{-5mm}
+\end{align}
+In order to establish the connection between the current value
+and its successors, \textit{i.e.}, deriving the Bellman equation, we need
+to further expand the $Q_A[ \rvs_t,\bar{\rvo}_t,\rva_t]$ to the
+next time step:
+\begin{align}
+  \label{eq:no_recur}
+  Q_A[ \rvs_t,\bar{\rvo}_t,\rva_t]=\E[G_t| \rvs_t,\bar{\rvo}_t,\rva_t]=
+  r(s,a) + \gamma\sum_{\rvs_{t+1}}P(\rvs_{t+1}|\rvs_t,\rva_t)\E[G_t|\rvs_{t+1},\bar{\rvo}_t]
+  \vspace{-5mm}
+\end{align}
+However, as shown in Eq.~(\ref{eq:no_recur}), the last term has an
+extra dependency on the hidden variable $\bar{\rvo}_t$. As a
+result, the conventional value function $V[\rvs_t]$ does not
+yield the recursive formulation required for deriving the Bellman
+equation. This issue has not been identified in related
+literatures
+\cite{henderson2018optiongan,sharma2018directed,shankar2020learning,lee2020learning,zhang2019dac}
+which employ the \emph{option policy} as ``one-step option''. In
+order to address this issue, we propose a novel \emph{Markovian
+  option-value function}
+$\bar{V}[\rvs_{t+1},\bar{\rvo}_{t}]=\E[G_t|\rvs_{t+1},\bar{\rvo}_t]$
+and prove that:
+\begin{prop}
+  \label{prop:var_unb}
+  $\bar{V}[\rvs_t,\bar{\rvo}_{t-1} ]$ is an unbiased estimation
+  of $V[ \rvs_t ]$.
+\end{prop}
+\begin{prop}
+  \label{prop:var_red}
+  The variance of $\bar{V}[\rvs_t,\bar{\rvo}_{t-1} ]$ is
+  up-bounded by $V[ \rvs_t ]$.
+\end{prop}
+Proofs are available in Appendix \ref{sec:appen_sa_v_proof}. The
+variance-reduction effect is empirically verified in
+Section~\ref{sec:exp}. We can then employ the \emph{Markovian
+  option-value function} $\bar{V}[\rvs_t,\bar{\rvo}_{t-1}]$ to
+derive the Bellman equation:
+\begin{equation}
+  \label{eq:sa_v}
+  \bar{V}[\rvs_{t+1},\bar{\rvo}_{t}]=\E[G_{t+1}|\rvs_{t+1},\bar{\rvo}_{t}]= \sum_{\bar{\rvo}_{t+1}}P(\bar{\rvo}_{t+1}|\rvs_{t+1},\bar{\rvo}_{t})Q_O[ \rvs_{t+1},\bar{\rvo}_{t+1}].
+\end{equation}
+Expanding $Q_O$ in Eq.~(\ref{eq:sa_v}) through Eq.~(\ref{eq:sa_q_o})
+to Eq.~(\ref{eq:no_recur}) gives the recursive formulation of the
+Bellman equation. With the Bellman equation in hand, we now are
+able to derive policy gradient theorems (Note that to keep notations uncluttered, we use $\theta_{\bar{o}}$ to denote \emph{option policy}'s parameters
+$P(\bar{\rvo}_{t}|\rvs,\bar{\rvo}_{t-1};\theta_{\bar{o}})$ and $\theta_a$ to denote action policy's parameters
+$P(\rva_t|\rvs_t,\bar{\rvo}_t;\theta_a)$):
+
+\begin{thm}
+  \textbf{ Option Policy Gradient Theorem: } Given a stochastic
+  \emph{option policy} differentiable in its parameter vector
+  $\theta_{\bar{o}}$, the gradient of the expected discounted
+  return with respect to $\theta_{\bar{o}}$ is:
+  \begin{equation}
+    \label{eq:sa_o_grad}
+    \frac{\partial \bar{V}[\rvs_t,\bar{\rvo}_{t-1}]}{\partial \theta_{\bar{o}}}=\E[\;\frac{\partial P(\bar{\rvo}'|\rvs',\bar{\rvo})}{\partial \theta_{\bar{o}}}Q_O[\rvs',\bar{\rvo}']\;|\;\rvs_t,\bar{\rvo}_{t-1}],
+  \end{equation}
+  ~where $\bar{\rvo}'$ is one time step later than $\bar{\rvo}$.
+\end{thm}
+\begin{thm}
+  \textbf{ Action Policy Gradient Theorem: } Given a stochastic action policy
+  differentiable in its parameter vector $\theta_a$, the gradient
+  of the expected discounted return with respect to $\theta_a$ is:
+  \begin{equation}
+    \label{eq:sa_a_grad}
+      \frac{\partial Q_O[\rvs_t,\bar{\rvo}_t]}{ \partial \theta_a }=\E[\;\frac{\partial P(\rva|\rvs,\bar{\rvo})}{\partial \theta_a}Q_A[ \rvs,\bar{\rvo},\rva]\; | \; \rvs_t,\bar{\rvo}_t].
+  \end{equation}
+\end{thm}
+\vspace{-3mm} Detailed proofs of these two theorems are available
+in Appendix~\ref{sec:appen_sa_a_grad}. Similar to
+DAC~\cite{zhang2019dac}, our gradient theorems enable a two-stage
+optimization scheme (Appendix \ref{sec:append_algo}) for learning
+options, in which sample efficient MDP-based algorithms (such as
+PPO \cite{witoonchart2017application}) can be employed directly.
+It is worth to clarify that the derivation of our theorems is
+significantly different from DAC. In DAC, the random variable
+$\rvo$ is part of the augmented space $\sS^H$ of the high-level
+MDP. On the contrary, we employ an HMM-style PGM and $\bar{\rvo}$
+is a hidden variable of the \emph{option policy} and the
+\emph{action policy}.
+
+\vspace{-3mm}
+\section{The Option2Vec Architecture}
+\label{sec:net_arch}
+\begin{wrapfigure}{r}[1pt]{0.4\textwidth}
+  \vspace{-5mm}
+  \includegraphics[width=1\linewidth]{./figures/sa_attn_net.pdf}
+  \vspace{-4mm}\caption{\label{fig:sa_net}\small The Option2Vec Architecture.}
+\end{wrapfigure}
+\vspace{-3mm}
+As illustrated in Section~\ref{sec:option_embed}, our main
+contributions are representing options as embeddings ($Option^{\textrm{Embed}}$) and
+replacing the \emph{call-and-return} mode with the
+\emph{clustering mechanism}. Inspired by the \emph{Transformer}
+\cite{vaswani2017attention}, in this section we 
+implement above mechanisms as Option2Vec, a simple yet
+effective Multi-Head Attention (MHA) \cite{vaswani2017attention}
+based Encoder-Decoder architecture as shown in Figure~\ref{fig:sa_net}. Due
+to space limitations, we explain MHA in
+Appendix~\ref{sec:appen_mha}.
+In Option2Vec, we implement the \emph{option
+  policy} $P(\bar{\rvo}_t|\rvs_t,\bar{\rvo}_{t-1};\mW_{\rvo})$ as
+the encoder and treat the option embedding matrix $\mW_{\rvo}$ as
+encoder's parameters. Specifically, we define the \emph{option
+  encoder} as:
+\begin{align}
+  \label{eq:net_encoder}
+  \bar{\rvo}_t\sim Categorical(Clustering(\rvs_t,\bar{\rvo}_{t-1},\mW_{\rvo}))
+\end{align}
+where $Categorical(\cdot)$ is a $K$-dimensional categorical distribution, $K$ is the number of options, and distances between the pair $[\rvs_t,\hat{\rvo}_{t-1}]$ (where $\hat{\rvo}_{t-1}=\mW_{\rvo}\bar{\rvo}_{t-1}$) and
+all clustering centroids $\hat{\rvo}$ in embedding matrix $\mW_{\rvo}=[\hat{\rvo}_1,...,\hat{\rvo}_K]$ are measured by an
+efficient MHA-based \emph{clustering module}:
+\vspace{-1mm}\begin{align}
+  \label{eq:net_encoder}
+Clustering(\rvs_t,\bar{\rvo}_{t-1},\mW_{\rvo})=\text{FFN}(\text{MHA}(\text{Query}=\text{FFN}([\rvs_t,\hat{\rvo}_{t-1}]),
+\text{Key=Value}=\mW_{\rvo}))
+\end{align}
+where the concatenated vector $[\rvs_t,\hat{\rvo}_{t-1}=\mW_{\rvo}\bar{\rvo}_{t-1}]$ is
+mapped back to a point in the parametric space by employing a
+simple Feed-Forward Network. Option2Vec largely improves the
+option framework's scalability: under the $Option^{\textrm{Triple}}$
+formulation, adding one option means adding two distributions
+(normally implemented as neural networks); on the contrary, in
+Option2Vec adding one option is as simple as adding one embedding
+vector $\hat{\rvo}$. Because the \emph{clustering module} is
+MHA-based, the number of parameters for the network stays unchanged
+with respect to the number of embeddings in $\mW_{\rvo}$.
+With all knowledge of an option (\textit{e.g.}, where to initiate, what
+actions to emit, and when to terminate) encoded as an embedding vector $Option^{\textrm{Embed}}$, the
+\emph{action policy} can be simply implemented as one decoder,
+which learns to decode $\hat{\rvo}_t$ and $\rvs_t$ into primary
+actions $\rva_t$.
+\begin{align}
+  \label{eq:sa_net_action_sample}
+  \rva_t \sim Gaussian(\text{FFN}([\rvs_t,\hat{\rvo}_{t}]))
+\end{align}
+which is shared by all $Option^{\textrm{Embed}}$. This design choice
+largely improves Option2Vec's sample efficiency and speed of
+convergence: unlike in $Option^{\textrm{Triple}}$ that only the activated
+option $\omega_o$'s \emph{intra-option policy} gets updated, the
+\emph{action policy} learns to decode $Option^{\textrm{Embed}}$ at every
+time step.
+
+Because of the \emph{Markovian option-value function} $\bar{V}[
+\rvs_{t+1},\bar{\rvo}_{t} ]$ is an expectation of the
+\emph{option-value function} $Q_O[\rvs_{t+1},\bar{\rvo}_{t+1}]$
+in Eq.~(\ref{eq:sa_v}), we only need to model only one critic
+function: $Q_O=\text{FFN}(\rvs_t,\bar{\rvo}_t)$, where $Q_O$ is
+also a decoder of $\rvs_t$ and $\bar{\rvo}_t$. We summarize the
+detailed algorithm in Appendix~\ref{sec:append_algo} and upload
+our code in supplemental materials.
+
+\vspace{-3mm}
+\section{Experiments}
+\label{sec:exp}
+\vspace{-2mm}
+% to write: in this section,
+In this section, we design experiments to answer five questions:
+(Q1) Under the ``one-step option'' setting (Section
+\ref{sec:option_pgm}), whether $Option^{\textrm{Embed}}$ is a more compact and effective representation than
+$Option^{\textrm{Triple}}$? (Q2) Beyond ``one-step option''
+setting, whether Option2Vec can achieve better performance than other option variants and non-option baselines? (Q3) Does $Option^{\textrm{Embed}}$ have a performance boost over other option variants in transfer learning settings? (Q4) Is $Option^{\textrm{Embed}}$ interpretable? (Q5) Whether Option2Vec can temporally extend options under the \emph{clustering} mechanism?
+
+For baselines, we follow DAC~\cite{zhang2019dac}'s open source
+implementations and compare our algorithm with six baselines,
+five of which are option variants, \textit{i.e.}, DAC+PPO, AHP+PPO
+\cite{levy2011unified}, IOPG \cite{smith2018inference}, PPOC
+\cite{klissarov2017learnings} and OC \cite{bacon2017option} The
+non-option baseline is PPO \cite{schulman2017proximal}. All
+baselines' parameters used by DAC remain unchanged other than the
+maximum number of training steps: Option2Vec only needs 1 million
+steps to converge rather than the 2 million used in DAC. For
+single task learning, experiments are conducted on all OpenAI Gym
+MuJoCo environments (10 environments) \cite{brockman2016openai}.
+For transfer learning, we follow DAC and run 6 pairs of transfer
+learning tasks based on DeepMind Control Suite
+\cite{tassa2020dmcontrol}. Figures are plotted using DAC's
+original script: curves are averaged over 10 independent runs and
+smoothed by a sliding window of size 20. Shaded regions indicate
+standard deviations. All experiments are run on an Intel® Core™
+i9-9900X CPU @ 3.50GHz with a single thread and process. Our
+implementation details are summarized in
+Appendix~\ref{sec:append_implement}.
+
+For a fair comparison, we follow DAC and use four options in all
+implementations. We fix the embedding dimension of
+$Option^{\textrm{Embed}}$ to $40$ in all environments, \textit{i.e.},
+$\mW_{\rvo}\in \sR^{40\times 4}$. Under this configuration,
+Option2Vec only use 15.8\% parameters in all experiments (single
+task and transfer learning) compared to the other option
+variants. Our code is available in supplemental materials.
+
+\vspace{-3mm}\subsection{Single-Task Learning (Q1 \& Q2)}
+\label{sec:exp_perf}
+\vspace{-2mm}
+To answer Q1, we need to compare the effectiveness of
+$Option^{\textrm{Embed}}$ and $Option^{\textrm{Triple}}$ under the same ``one-step
+option'' setting. As explained in Section \ref{sec:option_pgm},
+although DAC is derived under the ``one-step option'' setting, it still employs \emph{termination
+  function} and \emph{master policy} for better performance. Therefore, we
+implement a ``DAC-OneStep'' that only employs the \emph{option policy} (code is available in supplemental
+materials) and compare its performance with ours in Figure
+\ref{fig:ET4}. Experiments show that $Option^{\textrm{Embed}}$
+outperforms $Option^{\textrm{Triple}}$ in all environments by a
+large margin. This is because, as explained in Section
+\ref{sec:option_pgm}, under the ``one-step option'' setting, the
+$Option^{\textrm{Triple}}$'s integer \emph{option index} $\rvo$
+in Eq.~(\ref{eq:oc_pgm_joint}) contains little context information for the \emph{option policy}
+to exploit compared to the $Option^{\textrm{Embed}}$. Moreover,
+an $Option^{\textrm{Embed}}$ vector only has $40$ parameters to
+train compared to $Option^{\textrm{Triple}}$'s $19$K parameters
+(in DAC each \emph{intra-option policy} is a 3-layer FFN). Therefore, $Option^{\textrm{Embed}}$ is a more compact and
+effective representation of options compared to
+$Option^{\textrm{Triple}}$.
+\begin{figure*}[thb]
+  \vspace{-4mm}
+  \begin{subfigure}{1\textwidth}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/ET4.png}
+    \vspace{-6mm}
+    \caption{\label{fig:ET4}\small Q1: Option2Vec
+      v.s. DAC-OneStep}
+  \end{subfigure}
+  \newline
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/Inf2.png}
+    \vspace{-6mm}
+    \caption{\small Q2: Infinite horizon environments}
+    \label{fig:exp_inf}
+  \end{subfigure}
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/F2.png}
+    \vspace{-6mm}
+    \caption{\small Q2: Finite horizon environments}
+    \label{fig:exp_finite}
+  \end{subfigure}
+  \vspace{-2mm}
+  \caption{\small Single-task episodic returns in 4 different environments (\textit{i.e.}, HalfCheetah-v2, HumanoidStandup-v2, Walker2d-v2, and Hopper-v2). Results in all 10 environments are available in Appendix \ref{sec:append_exp_perf}.}
+  \label{fig:exp_dac} 
+  \vspace{-4mm}
+\end{figure*}
+
+To answer Q2, we compare Option2Vec against five different option variants (\textit{i.e.}, DAC+PPO~~\cite{zhang2019dac}, AHP+PPO
+\cite{levy2011unified}, IOPG \cite{smith2018inference}, PPOC
+\cite{klissarov2017learnings} and OC \cite{bacon2017option}) and PPO~\cite{schulman2017proximal}. It is surprising that Option2Vec shows two different
+performance on infinite (Figure \ref{fig:exp_inf}) and and finite
+(Figure \ref{fig:exp_finite}) horizon environments. Previous
+literatures~\cite{klissarov2017learnings,smith2018inference,harb2018waiting,zhang2019dac}
+find that option-based algorithms do not have advantages over
+hierarchy-free algorithms on single-task environments. Option2Vec
+is also able to achieve comparable performance with state of the arts (Figure
+\ref{fig:exp_finite}) but with only 15.8\% parameters.
+More importantly, on infinite horizon environments
+(Figure~\ref{fig:exp_inf}), Option2Vec's performance
+significantly outperforms all baselines with respect to episodic
+return, convergence speed, variance between steps, and variance
+between 10 runs (Proposition \ref{prop:var_red}). Because
+theoretically infinite and finite horizon environments are
+identical \cite{sutton2018reinforcement}, we do not have a
+theoretical explanation for this performance difference. In
+Appendix~\ref{sec:append_gist} we conceptually explain that this
+might because conventional value functions are insufficient to
+approximate environments in which hidden variables $\rvo$ only
+affect rewards but not states. In conclusion, experiment
+results show that by employing embeddings and the
+\emph{clustering} mechanism (Section \ref{sec:option_embed}),
+Option2Vec is at least as effective as other option variants yet
+with significantly less computational cost, while has a
+significant advantage on infinite horizon.
+
+\vspace{-2mm}\subsection{Transfer Learning (Q3)}
+\label{sec:transfer}
+We run 6 pairs of transfer learning tasks constructed in DAC
+based on DeepMind Control Suite \cite{tassa2020dmcontrol}. Each
+pair contains two different tasks. To keep consistent with DAC,
+we train all models one million steps on the first task and
+switch to the second (with $Option^{\textrm{Embed}}$ frozen) to run
+another one million steps. Results are reported in
+Figure~\ref{fig:transfer}. On the transfer learning (the second)
+task, Option2Vec's performance ranks the first in 5 out of 6
+environments. This shows Option2Vec's advantages in knowledge
+reuse tasks and its performance is at least comparable with other
+option variants with significantly less computational cost.
+\vspace{-2mm}
+\begin{figure*}[h]
+  \vspace{-2mm} \centering
+  \includegraphics[width=1\linewidth]{./figures/transfer3.png}\\
+  \vspace{-2mm}
+  \caption{\small\label{fig:transfer} Transfer learning
+    results on three pairs of tasks. All 6 pairs of results are available in Appendix.
+    \ref{sec:append_exp_perf}}
+  \vspace{-4mm}
+\end{figure*}
+
+\subsection{Interpretation of Option Embeddings (Q4)}
+\label{sec:interpret}
+\vspace{-1mm}Interpretability is a key property (\textit{e.g.}, ensuring safety to
+human, \textit{etc.}) to apply RL agents in
+real-world applications. $Option^{\textrm{Embed}}$ has a nature advantage
+over $Option^{\textrm{Triple}}$ on interpretability: as word embeddings
+\cite{vaswani2017attention}, $Option^{\textrm{Embed}}$ learns a semantic
+space of options with each dimension encodes a particular
+property and can be interpreted explicitly. As in the capsule
+network \cite{sabour2017dynamic}, we first reason each embedding
+dimension's semantic by adding perturbations on to it, and
+inspecting perturbations' effects on primary actions $\rva$
+(Figure \linkblue{6(b)}). Once each dimension is
+understood, embeddings become straight forward to interpret by
+simply inspecting on which dimensions each embedding $\hat{\rvo}$
+(Figure \linkblue{6(a)}) has significant weights, and
+interpreting properties of those dimensions
+(Figure \linkblue{6(c)} ). Due to space limitations,
+more details and GIFs are provided in
+Appendix~\ref{sec:append_interpret}.
+\vspace{-5mm}\begin{center}
+\resizebox{1\columnwidth}{!}{%
+\vspace{-3mm}\begin{tabular}{cc}
+  \includegraphics[width=0.7\linewidth]{./figures/interp_joint.pdf}&
+                                                                     \includegraphics[width=0.275\linewidth]{./figures/duration_main.pdf}\\
+  {\small\label{fig:interp_joint}
+  Figure 6: Interpretation of option embeddings}&
+                                              {\small \label{fig:skill_sequence} Figure 7: Option
+                                              Duration Patterns}
+\end{tabular}\vspace{-2mm}
+}
+\end{center}
+
+\vspace{-3mm}\subsection{Temporal Extension (Q5)}
+\label{sec:exp_ext}
+\vspace{-2mm}We  explained in Section \ref{sec:option_embed} that
+\emph{clustering mechanism} is able to temporally extend an
+option without the \emph{termination function}. In this subsection we empirically demonstrate this in Figure \linkblue{7}
+(more details in Appendix~\ref{sec:append_exp_ext}). 
+At the start of training, all options' durations are short, while Option 3's
+duration quickly grows. Although this proves that Option2Vec does
+temporally extend an option, it also shows that Option2 quickly
+dominates the whole episode. The ``dominant skill problem'' is
+not unique to Option2Vec, it is a long identified problem of the
+option framework \cite{haarnoja2018latent}. However, as shown in
+the \linkblue{video}\footnote{\linkblue{https://www.youtube.com/watch?v=F26tcSsIoMA}},
+Option2Vec actually learns distinguishable options. Option 3 is a
+running forward skill thus it dominates the whole episode. Option
+2 is mainly used to recover from falling down thus its duration
+decreases with training. In Appendix \ref{sec:append_gist}, we
+argue that the dominant skill problem is actually a problem of
+learning options at multi-level granularities. Since distances
+between embeddings are trivial to measure, $Option^{\textrm{Embed}}$
+potentially provides an elegant solution to this problem. We
+focus this paper on proposing Option2Vec and will further explore this problem in future works.
+
+\vspace{-2mm}\section{Related Works}
+\label{sec:review}
+% todo: SMDP-style MDP-style
+\vspace{-2mm}To discover options automatically, \citename{sutton1999between}
+proposed Intra-option Q-learning to update the master Q value
+function at every time step. However, all policies under this
+formulation are approximated implicitly using the Q-learning
+method. AHP \cite{levy2011unified} is proposed to unify the
+Semi-Markov process into an augmented Markov process and
+explicitly learn an ``overall policy'' by applying MDP-based
+policy gradient algorithms. However, their method for updating
+the master policy is still SMDP-style thus sample inefficient. OC
+\cite{bacon2017option} proposes a policy gradient based framework
+for explicitly learning intra-option policies and
+\emph{termination function}s in an intra-option manner. However,
+for the master policy's policy gradients learning, OC still
+remains SMDP-style. DAC \cite{zhang2019dac} reformulated the
+option framework into two augmented MDPs. Under this formulation, all policies can be modeled explicitly and learned in MDP-style. Policy gradient theorems we derive also follow DAC's efficient
+two-stage optimization scheme yet is significantly different
+from DAC as explained in Section \ref{sec:pgm_opt}. All above
+option variants employ computationally expensive
+$Option^{\textrm{Triple}}$ and \emph{call-and-return} mode, while
+Option2Vec employs more simple yet efficient
+$Option^{\textrm{Embed}}$ and \emph{clustering mechanism}. We
+must appreciate that \citename{bacon2018temporal} in his Ph.D.
+thesis (Chapter 3.5, 3.6) first conceptually discussed the
+possibility of introducing distributed representations into the
+option framework. However, to the best of our knowledge,
+Option2Vec is the first concrete work that enables learning
+options as distributed representations and deriving learning
+algorithms.
+
+% With respect to optimization, \citename{zhang2019dac} pointed out
+% that a large margin of performance boost of DAC comes from
+% Proximal Policy Optimization \cite{schulman2017proximal} (PPO).
+% Since Option2Vec is MDP-based, it can be optimized directly with the PPO.
+% Recent works show that the option framework trained under
+% off-policy \cite{haarnoja2018soft} algorithms outperforms
+% on-policy methods. For instance, HO2 \cite{wulfmeier2020data}
+% employs a trust-region constrained off-policy algorithm and shows
+% that it exhibits significant advantages over on-policy methods on
+% both sample efficiency and performance. In this paper, we propose
+% Option2Vec as a general HRL framework which can be trained by both
+% on-policy and off-policy algorithms. Our main contribution
+% focuses on deriving MDPs of Option2Vec and its policy gradient theorems.
+% Designing off-policy algorithms for Option2Vec remains open for future
+% work.
+
+As for state abstractions, cognitive science experiments
+\cite{xia2020temporal} conducted with human participants prove
+that human structure, generalize, and adapt past knowledge to new
+environments by employing both state abstraction and temporal
+abstraction. However, existing RL literature
+\cite{hausman2018learning,li2017infogail,tirumala2019exploiting}
+only use latent variables to learn state abstractions. Typically,
+PEARL \cite{rakelly2019efficient} learns a latent context vector
+for each task under the meta-reinforcement learning framework to
+improve the agent's sample and transfer learning efficiency.
+However, embeddings learned by RL frameworks only encode state
+abstraction while Option2Vec is the first option variant learns
+abstractions at both state and temporal dimensions.
+\vspace{-4mm}\section{Conclusions}
+\label{sec:conclusion}
+\vspace{-2mm}
+In this paper, we proposed a compact and effective embedding representation for the option framework, $Option^{\textrm{Embed}}$.
+For learning $Option^{\textrm{Embed}}$, we developed a novel \emph{Markovian Option-Value function} and derived sample efficient policy gradient theorems based on this
+value function. We implemented the whole mechanism as Option2Vec, a simple yet effective, transformer-like Attention-based Encoder-Decoder
+architecture. Empirical studies showed that $Option^{\textrm{Embed}}$ can significantly outperform $Option^{\textrm{Triple}}$ under the same ``One-step option'' setting in all environments. We also showed that Option2Vec achieves at least comparable performance to other option variants and non-option baselines on finite and transfer learning environments but with only 15.8\% parameters, while has a significant performance boost on infinite environments.
+Moreover, option embedding has good interpretability, which is a key property for applying RL agents in real-world applications.
+
+It is also worth mentioning that, the $Option^{\textrm{Embed}}$
+establishes a direct connection to causal reinforcement learning
+\cite{kolobov2012discovering,perez2020generalized}. If trained
+under a model-based setting, $Option^{\textrm{Embed}}$ is a minimal causal
+feature set (Theorem 3 \cite{zhang2020learning}) on both temporal
+and state dimensions. We will investigate the causal properties of Option2Vec in our future works.
+
+\bibliography{Bibs/hrl,Bibs/fin,Bibs/lit,Bibs/sa,Bibs/causal,Bibs/IL}
+% \bibliography{Bibs/rehrl,Bibs/refin,Bibs/relit,Bibs/resa,Bibs/recausal,Bibs/reIL}
+\bibliographystyle{icml2021}
+
+
+% \begin{ack}
+% Use unnumbered first level headings for the acknowledgments. All acknowledgments
+% go at the end of the paper before the list of references. Moreover, you are required to declare
+% funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
+% More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2021/PaperInformation/FundingDisclosure}.
+
+% We thank Shangtong Zhang for his great open source project. We
+% deeply appreciate Pierre-Luc Bacon, Matthew D Riemer and
+% Shangtong Zhang's patience in answering our questions.
+
+% Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to autmoatically hide this section in the anonymized submission.
+% \end{ack}
+
+% \section*{References}
+
+% References follow the acknowledgments. Use unnumbered first-level heading for
+% the references. Any choice of citation style is acceptable as long as you are
+% consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
+% when listing the references.
+% Note that the Reference section does not count towards the page limit.
+% \medskip
+
+% {
+% \small
+
+% [1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
+% connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
+% (eds.), {\it Advances in Neural Information Processing Systems 7},
+% pp.\ 609--616. Cambridge, MA: MIT Press.
+
+% [2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
+%   Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
+% TELOS/Springer--Verlag.
+
+% [3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
+% recall at excitatory recurrent synapses and cholinergic modulation in rat
+% hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
+% }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Checklist}
+
+\begin{enumerate}
+
+\item For all authors...
+\begin{enumerate}
+  \item Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
+    \answerYes{}
+  \item Did you describe the limitations of your work?
+    \answerYes{}
+  \item Did you discuss any potential negative societal impacts
+    of your work? \answerNo{Our contribution is about making the
+      option framework more efficient (environmental friendly)
+      and interpretable (ensuring safety in real-world
+      applications). We did think about potential negative
+      impacts but really hard to come up with some.}
+  \item Have you read the ethics review guidelines and ensured that your paper conforms to them?
+    \answerYes{}
+\end{enumerate}
+
+\item If you are including theoretical results...
+\begin{enumerate}
+\item Did you state the full set of assumptions of all
+  theoretical results? \answerYes{Due to page limitations, we
+    defer full set of assumptions to Appendix (supplemental
+    materials).}
+\item Did you include complete proofs of all theoretical results?
+  \answerYes{Due to page limitations, we defer complete proofs to
+    Appendix (supplemental materials).}
+\end{enumerate}
+
+\item If you ran experiments...
+\begin{enumerate}
+  \item Did you include the code, data, and instructions needed to reproduce the main experimental results (either in the supplemental material or as a URL)?
+    \answerYes{In supplemental material}
+  \item Did you specify all the training details (e.g., data splits, hyperparameters, how they were chosen)?
+    \answerYes{In supplemental material}
+	\item Did you report error bars (e.g., with respect to the random seed after running experiments multiple times)?
+    \answerYes{In supplemental material}
+	\item Did you include the total amount of compute and the type of resources used (e.g., type of GPUs, internal cluster, or cloud provider)?
+    \answerYes{Section \ref{sec:exp}}
+\end{enumerate}
+
+\item If you are using existing assets (e.g., code, data, models) or curating/releasing new assets...
+\begin{enumerate}
+  \item If your work uses existing assets, did you cite the creators?
+    \answerYes{}
+  \item Did you mention the license of the assets?
+    \answerNo{We use standard RL environments and MIT licensed
+      DAC's codebase.}
+  \item Did you include any new assets either in the supplemental material or as a URL?
+    \answerNo{}
+  \item Did you discuss whether and how consent was obtained from people whose data you're using/curating?
+    \answerNo{We use standard RL environments and MIT licensed
+      DAC's codebase.}
+  \item Did you discuss whether the data you are using/curating contains personally identifiable information or offensive content?
+    \answerNo{We use standard RL environments and MIT licensed
+      DAC's codebase.}
+\end{enumerate}
+
+\item If you used crowdsourcing or conducted research with human subjects...
+\begin{enumerate}
+  \item Did you include the full text of instructions given to participants and screenshots, if applicable?
+    \answerNo{}
+  \item Did you describe any potential participant risks, with links to Institutional Review Board (IRB) approvals, if applicable?
+    \answerNo{}
+  \item Did you include the estimated hourly wage paid to participants and the total amount spent on participant compensation?
+    \answerNo{}
+\end{enumerate}
+\end{enumerate}
+
+\end{document}
